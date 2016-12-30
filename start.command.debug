@@ -1,0 +1,23 @@
+#!/bin/bash
+SCRIPT=$(readlink -f "$0")
+SCRIPTPATH=$(dirname "$SCRIPT")
+DHCP_IP=$(grep dhcp $SCRIPTPATH/../config-files/IPs | awk -F= '{print $2}')
+NETMASK=$(grep netmask $SCRIPTPATH/../config-files/IPs | awk -F= '{print $2}')
+NETMASK_PREFIX=$(docker run --rm ehudkaldor/helper ipcalc -p $DHCP_IP $NETMASK | awk -F= '{print $2}')
+
+echo $DHCP_IP
+echo $NETMASK
+echo $NETMASK_PREFIX
+echo $SCRIPTPATH
+echo $HOME_GATEWAY_CONFIG_PATH/containers/isc-dhcp/etc/dhcp
+
+docker kill dhcp
+docker rm dhcp
+DHCP_CONTAINER=$( \
+	docker run -it --rm \
+	--privileged \
+	-v $HOME_GATEWAY_CONFIG_PATH/containers/isc-dhcp/etc/dhcp:/etc/dhcp \
+	--name dhcp \
+	ehudkaldor/isc-dhcp sh \
+)
+sudo ./pipework br0 $DHCP_CONTAINER 10.0.5.2/24
